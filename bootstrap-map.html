@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="nl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <title></title>
+        <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/css/bootstrap.css" rel="stylesheet">
+        <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.1/css/font-awesome.min.css" type="text/css" media="screen" />
+		<!--[if IE 7]>
+            <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.1/css/font-awesome-ie7.min.css">
+        <![endif]-->
+		<style>
+                    #noordpijl {position:absolute;left:20px;bottom:40px;z-index:3000;}
+                    #mapc1map1 {position:absolute;top:0;left:0;margin:0;width:100%;height:100%;z-index:0;}
+                    html, body{margin:0;width:100%;height:100%;}
+                    a {outline:0 !important;}
+                    #footer {background:none repeat scroll 0 0 #FFFFFF;border-radius:5px 0 0 0;bottom:0;color:#000000;font-size:10px;padding-right:1em;position:absolute;text-align:right;width:100%;}
+                    .btn-group {z-index:1001;}
+                    #minimappanel {margin-bottom:0 !important;}
+		</style>
+    </head>
+    <body>
+        <div id="btngrp_2" class="btn-group pull-right">
+            <a id="zoom_prev" class="btn btn-default navbar-btn disabled" href="#" title="Vorig kaartbeeld"><i class="icon-reply"></i></a>
+            <a id="zoom_next" class="btn btn-default navbar-btn disabled" href="#" title="Volgend kaartbeeld"><i class="icon-share-alt"></i></a>
+            <a id="zoom_in" class="btn btn-default navbar-btn" href="#" title="Zoom in"><i class="icon-zoom-in"></i></a>
+            <a id="zoom_out" class="btn btn-default navbar-btn" href="#" title="Zoom uit"><i class="icon-zoom-out"></i></a>
+        </div>
+        <div id="btngrp_3" class="btn-group pull-right">
+            <!-- <a id="c_minimap" class="btn btn-default navbar-btn" href="#" title="Referentie kaart"><i class="icon-picture"></i></a> -->
+            <a id="tb01" data-toggle="modal" class="btn btn-default navbar-btn" href="#overlaypanel" title="Lagen"><i class="icon-map-marker"></i></a>
+            <a id="tb02" data-toggle="modal" class="btn btn-default navbar-btn" href="#baselayerpanel" title="Ondergrond"><i class="icon-globe"></i></a>
+        </div>
+        <div id="mapc1map1"><div id="noordpijl" title="Kaart noorden" style="cursor:pointer;"><i class="icon-long-arrow-up" style="font-size: 40px;"></i><span style="font-size: 20px;">N</span></div></div>
+        <div id="footer">
+            <span id="measure"></span>
+            <span id="coords"></span>
+            <span id="scale"></span>
+            <span id="attribution"></span>
+        </div>
+        <div class="modal fade" id="settingspanel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <!--<button type="button" class="close" data-target="#settingspanel" data-dismiss="modal" aria-hidden="true">&times;</button>-->
+                        <h4 class="modal-title">Instellingen</h4>
+                    </div>
+                    <div id="settingspanel_b" class="modal-body"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="baselayerpanel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header"></div>
+                    <div id="baselayerpanel_b" class="modal-body"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="overlaypanel">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header"></div>
+                    <div class="modal-body">
+                        <div class="tabbable" style="display:none;">
+                            <ul class="nav nav-tabs">
+                                <li class="active"><a href="#overlay_tab1" data-toggle="tab">DBK lagen</a></li>
+                                <li><a href="#overlay_tab2" data-toggle="tab">Systeem lagen</a></li>
+                                <li><a href="#overlay_tab3" data-toggle="tab">Eigen lagen</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div class="tab-pane active" id="overlay_tab1">
+                                    <div id="overlaypanel_b1" class="panel-group"></div>
+                                </div>
+                                <div class="tab-pane" id="overlay_tab2">
+                                    <div id="overlaypanel_b2" class="panel-group"></div>
+                                </div>
+                                <div class="tab-pane" id="overlay_tab3">
+                                    <div id="overlaypanel_b3" class="panel-group"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/proj4js/1.1.0/proj4js-compressed.min.js" type="text/javascript"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/openlayers/2.12/OpenLayers.min.js" type="text/javascript" ></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0/js/bootstrap.min.js" type="text/javascript"></script>
+        <script type="text/javascript">
+	    OpenLayers.IMAGE_RELOAD_ATTEMPTS = 3;
+            OpenLayers.Util.onImageLoadErrorColor = "transparent";
+            //OpenLayers.Lang["nl"] = OpenLayers.Util.applyDefaults({'Scale = 1 : ${scaleDenom}': "Schaal 1 : ${scaleDenom}"});
+            //OpenLayers.Lang.setCode("nl");
+           Proj4js.defs["EPSG:28992"] = "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +towgs84=565.2369,50.0087,465.658,-0.406857330322398,0.350732676542563,-1.8703473836068,4.0812 +no_defs <>";
+           var bootstrapMap = bootstrapMap || {};
+           window.bootstrapMap = bootstrapMap;
+           bootstrapMap.modules = bootstrapMap.modules || [];
+           bootstrapMap.overlays = bootstrapMap.overlays || [];
+           bootstrapMap.options = {
+               projection: {
+                   code: "EPSG:28992",
+                   coordinates: {
+                       numDigits: 0
+                   }
+               }
+           };
+           // PDOK settings, particular for the Netherlands national geodata services
+           // If the Dutch projection is in effect, set the resolutions and the max extent
+           // See (www.geonovum.nl/index.php/tiling) [Dutch]
+           bootstrapMap.options.pdok = {
+               tms: {
+                   baseURL: 'http://geodata.nationaalgeoregister.nl',
+                   TMS: 'http://geodata.nationaalgeoregister.nl/tms/',
+                   WMTS: 'http://geodata.nationaalgeoregister.nl/tiles/service/wmts',
+                   tileOrigin: new OpenLayers.LonLat(-285401.920, 22598.080),
+                   matrixSet: 'EPSG:28992',
+                   //tileOriginUL: new OpenLayers.LonLat(-285401.920, 903401.920),
+                   tileFullExtent: new OpenLayers.Bounds(-285401.920, 22598.080, 595401.920, 903401.920),
+                   serverResolutions: [3440.640, 1720.320, 860.160, 430.080, 215.040, 107.520, 53.760, 26.880, 13.440, 6.720, 3.360, 1.680, 0.840, 0.420, 0.210, 0.105, 0.0525],
+                   matrixIds: new Array(15),
+                   zoomOffset: 2
+               }
+           };
+
+           bootstrapMap.options.pdok.matrixIds = [];
+           if (bootstrapMap.options.projection.code === 'EPSG:28992') {
+               for (var i = 0; i < 15; ++i) {
+                   bootstrapMap.options.pdok.matrixIds[i] = bootstrapMap.options.projection.code + ':' + i;
+               }
+               bootstrapMap.options.pdok.resolutions = [3440.64, 1720.32, 860.16, 430.08, 215.04, 107.52, 53.76, 26.88, 13.44, 6.72, 3.36, 1.68, 0.84, 0.42, 0.210, 0.105, 0.0525, 0.02625, 0.013125, 0.0065625];
+               bootstrapMap.options.pdok.maxExtent = new OpenLayers.Bounds(-65200.96, 242799.04, 375200.96, 68320096);
+               bootstrapMap.options.pdok.units = "m";
+           }
+           bootstrapMap.options.baselayers = [
+               new OpenLayers.Layer.TMS(
+                   "Openbasiskaart",
+                   "http://openbasiskaart.nl/mapcache/tms/",
+                   {
+                       layername: 'osm-nb@rd', type: "png", serviceVersion: "1.0.0",
+                       gutter: 0, buffer: 0, isBaseLayer: true, transitionEffect: 'resize',
+                       tileOrigin: new OpenLayers.LonLat(-285401.92, 22598.08),
+                       resolutions: bootstrapMap.options.pdok.resolutions,
+                       zoomOffset: 0,
+                       units: "m",
+                       maxExtent: new OpenLayers.Bounds(-285401.92, 22598.08, 595401.92, 903401.92),
+                       projection: new OpenLayers.Projection("EPSG:28992"),
+                       sphericalMercator: false,
+                       attribution: "OpenStreetMap"
+                   }
+               ),
+               new OpenLayers.Layer.WMS(
+                   'Luchtfoto 2009 (PDOK)',
+                   'http://geodata1.nationaalgeoregister.nl/luchtfoto/wms?',
+                   {
+                       layers: "luchtfoto",
+                       format: "image/jpeg",
+                       transparent: false
+                   },
+                   {
+                       transitionEffect: 'resize',
+                       singleTile: false,
+                       buffer: 0,
+                       isBaseLayer: true,
+                       visibility: true,
+                       attribution: "PDOK"
+                   }
+               ),
+               new OpenLayers.Layer.TMS(
+                   'Basisregistratie Topografie (PDOK)',
+                   bootstrapMap.options.pdok.tms.TMS,
+                   {
+                       layername: 'brtachtergrondkaart',
+                       isBaseLayer: true,
+                       displayInLayerSwitcher: true,
+                       type: 'png',
+                       matrixSet: bootstrapMap.options.pdok.matrixSet,
+                       matrixIds: bootstrapMap.options.pdok.matrixIds,
+                       tileOrigin: bootstrapMap.options.pdok.tms.tileOrigin,
+                       serverResolutions: bootstrapMap.options.pdok.tms.serverResolutions,
+                       tileFullExtent: bootstrapMap.options.pdok.tms.tileFullExtent,
+                       attribution: "PDOK"
+                   }
+               ),
+               new OpenLayers.Layer.TMS(
+                   'Topografische kaart 1:10.000 - top10nl (PDOK)',
+                   bootstrapMap.options.pdok.tms.TMS,
+                   {
+                       layername: 'top10nl',
+                       isBaseLayer: true,
+                       displayInLayerSwitcher: true,
+                       type: 'png',
+                       matrixSet: bootstrapMap.options.pdok.matrixSet,
+                       matrixIds: bootstrapMap.options.pdok.matrixIds,
+                       tileOrigin: bootstrapMap.options.pdok.tms.tileOrigin,
+                       serverResolutions: bootstrapMap.options.pdok.tms.serverResolutions,
+                       tileFullExtent: bootstrapMap.options.pdok.tms.tileFullExtent,
+                       attribution: "PDOK"
+                   }
+               )
+           ];
+           bootstrapMap.map = bootstrapMap.map || null;
+
+           bootstrapMap.init = function() {
+               var options = {
+                   theme: null,
+                   controls: [new OpenLayers.Control.Navigation()],
+                   div: 'mapc1map1',
+                   projection: new OpenLayers.Projection(bootstrapMap.options.projection.code),
+                   resolutions: [3440.64, 1720.32, 860.16, 430.08, 215.04, 107.52, 53.76, 26.88, 13.44, 6.72, 3.36, 1.68, 0.84, 0.42, 0.210, 0.105, 0.0525, 0.02625, 0.013125, 0.0065625],
+                   xy_precision: 3,
+                   maxExtent: new OpenLayers.Bounds(-65200.96, 242799.04, 375200.96, 68320096),
+                   units: "m"
+               };
+               bootstrapMap.map = new OpenLayers.Map(options);
+               bootstrapMap.map.addLayers(bootstrapMap.options.baselayers);
+               // Show mouseposition
+               var mousePos = new OpenLayers.Control.MousePosition({
+                   numDigits: bootstrapMap.options.projection.coordinates.numDigits,
+                   div: OpenLayers.Util.getElement('coords')
+               });
+               bootstrapMap.map.addControl(mousePos);
+               var attribution = new OpenLayers.Control.Attribution({
+                   div: OpenLayers.Util.getElement('attribution')
+               });
+               bootstrapMap.map.addControl(attribution);
+               var scalebar = new OpenLayers.Control.Scale(OpenLayers.Util.getElement('scale'));
+               bootstrapMap.map.addControl(scalebar);
+               bootstrapMap.naviHis = new OpenLayers.Control.NavigationHistory();
+               bootstrapMap.map.addControl(bootstrapMap.naviHis);
+               bootstrapMap.naviHis.activate();
+               var baselayer_ul = $('<ul class="nav nav-pills nav-stacked">');
+               $.each(bootstrapMap.options.baselayers, function(bl_index, bl) {
+                   var _li = $('<li class="bl"><a href="#">' + bl.name + '</a></li>');
+                   baselayer_ul.append(_li);
+                   _li.click(function() {
+                       bootstrapMap.toggleBaseLayer(bl_index);
+                   });
+               });
+               $('#baselayerpanel_b').append(baselayer_ul);
+               bootstrapMap.map.events.register("moveend", bootstrapMap.map, function() {
+                   //check if the naviHis has any content
+                   if (bootstrapMap.naviHis.nextStack.length > 0) {
+                       //enable next button
+                       $('#zoom_next').removeClass('disabled');
+                   } else {
+                       $('#zoom_next').addClass('disabled');
+                   }
+                   if (bootstrapMap.naviHis.previousStack.length > 1) {
+                       //enable previous button
+                       $('#zoom_prev').removeClass('disabled');
+                   } else {
+                       $('#zoom_prev').addClass('disabled');
+                   }
+               });
+               bootstrapMap.toggleBaseLayer(0);
+               bootstrapMap.overview = new OpenLayers.Control.OverviewMap({
+                   div: document.getElementById('minimappanel_b'),
+                   size: new OpenLayers.Size(180, 180)
+               });
+               bootstrapMap.map.addControl(bootstrapMap.overview);
+               bootstrapMap.map.addControl(new OpenLayers.Control.Zoom(
+                       {
+                           zoomInId: "zoom_in",
+                           zoomOutId: "zoom_out"
+                       }
+                   )
+               );
+           };
+
+           /**
+            * Functie voor updaten van de zichtbaarheid van baselayers
+            * @param {integer} nr
+            */
+           bootstrapMap.toggleBaseLayer = function(nr) {
+               var layerbuttons = $(".bl");
+               var i;
+               for (i = 0; i < layerbuttons.length; i++) {
+                   if (i !== nr) {
+                       $(layerbuttons[i]).removeClass("active", true);
+                       bootstrapMap.options.baselayers[i].setVisibility(false);
+                   } else {
+                       $(layerbuttons[nr]).addClass("active", true);
+                       bootstrapMap.options.baselayers[nr].setVisibility(true);
+                       bootstrapMap.map.setBaseLayer(bootstrapMap.options.baselayers[nr]);
+                   }
+               }
+           };
+           bootstrapMap.createDialog = function(id, title, styleoptions) {
+               if (!styleoptions) {
+                   styleoptions = '';
+               }
+               var dialog = $('<div class="panel dialog" id="' + id + '" style="display:none;' + styleoptions + '"></div>');
+               var heading = $('<div id="' + id + '_h" class="panel-heading"></div>');
+               var close_button = $('<button type="button" class="close" aria-hidden="true">&times;</button>');
+               heading.append(close_button);
+               heading.append('<span class="h4">' + title + '</span>');
+               var dg_body = $('<div id="' + id + '_b" class="panel-body"></div>');
+               var dg_footer = $('<div id="' + id + '_f" class="panel-footer"></div>');
+               dialog.append(heading);
+               dialog.append(dg_body);
+               dialog.append(dg_footer);
+               close_button.click(function() {
+                   dialog.hide();
+               });
+               return dialog;
+           }
+           $('#zoom_prev').click(function() {
+               bootstrapMap.naviHis.previousTrigger();
+           });
+           $('#zoom_next').click(function() {
+               bootstrapMap.naviHis.nextTrigger();
+           }); 
+           $(document).ready(function() {
+               $('body').append(bootstrapMap.createDialog('minimappanel', '<i class="icon-picture"></i> Referentiekaart', 'bottom:0;'));
+               bootstrapMap.init();
+               bootstrapMap.map.zoomToMaxExtent();
+               bootstrapMap.map.zoomTo(4);
+               $('#c_minimap').click(function(){
+                   $('#minimappanel').toggle();
+               });
+            });
+	</script>
+    </body>
+</html>
